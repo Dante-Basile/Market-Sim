@@ -1,0 +1,6 @@
+(test
+  (name tests)
+  (libraries
+    market_sim_lib
+    core
+    ounit2))

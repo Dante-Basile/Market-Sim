@@ -1,0 +1,11 @@
+(rule
+  (target project.zip)
+  (deps
+    src/market_sim_lib.ml
+    src/market_sim.ml
+    src/dune
+    tests/tests.ml
+    tests/dune
+  )
+  (action
+    (run zip -R project.zip %{deps})))

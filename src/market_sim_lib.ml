@@ -5,9 +5,9 @@ open Core
 (*
   Contains a ticker for all companies listed on the market
   Maps ticker to list of past and present stock prices
-  string -> float option list
+  string -> float list
 *)
-type stock_price_map = float option list Map.M(String).t
+type stock_price_map = float list Map.M(String).t
 
 (*
   Maps ticker to past and present shares owned
@@ -41,7 +41,7 @@ type order_map = order list Map.M(String).t
   Add stock to stock_price_map
 *)
 let add_stock (ticker: string) (stocks: stock_price_map): (stock_price_map, string) result =
-  match Map.add stocks ~key:ticker ~data:([None]) with
+  match Map.add stocks ~key:ticker ~data:([]) with
   | `Ok stocks_new -> Ok stocks_new
   | `Duplicate -> Error "stock already exists"
 

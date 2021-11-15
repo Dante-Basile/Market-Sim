@@ -1,8 +1,3 @@
-module Bisect_visit___market_sim_lib___ml :
-  sig
-    val ___bisect_visit___ : int -> unit
-    val ___bisect_post_visit___ : int -> 'a -> 'a
-  end
 type stock_price_map = float list Base.Map.M(Core.String).t
 type stock_ct_map = int list Base.Map.M(Core.String).t
 type player = { funds : float list; stocks : stock_ct_map; }

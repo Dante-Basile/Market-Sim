@@ -62,12 +62,6 @@ val offer_ask : string -> order -> order_map -> stock_price_map -> player_map
   -> (order_map * stock_price_map * player_map, string) result
 
 (*
-  Place an order in the order map
-*)
-val add_order : string -> order -> order_map -> stock_price_map
-  -> order_map * stock_price_map
-
-(*
   Get the current price of a stock
 *)
 val get_price : string -> order_map -> (float, string) result

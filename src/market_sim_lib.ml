@@ -59,16 +59,18 @@ let buy_ipo (ticker: string) (o: order) (stocks: stock_price_map) (players: play
   | Some _ -> buy ticker o players
   | None -> Error "stock not listed on market"
 
+(*
+*)
+let add_order (ticker: string) (o: order) (orders: order_map) (stocks: stock_price_map):
+    (order_map * stock_price_map) =
+  failwith "unimplemented"
+
 let offer_bid (ticker: string) (o: order) (asks: order_map) (stocks: stock_price_map) (players: player_map):
     ((order_map * stock_price_map * player_map), string) result =
   failwith "unimplemented"
 
 let offer_ask (ticker: string) (o: order) (bids: order_map) (stocks: stock_price_map) (players: player_map):
     ((order_map * stock_price_map * player_map), string) result =
-  failwith "unimplemented"
-
-let add_order (ticker: string) (o: order) (orders: order_map) (stocks: stock_price_map):
-    (order_map * stock_price_map) =
   failwith "unimplemented"
 
 let get_price (ticker: string) (asks: order_map): (float, string) result =

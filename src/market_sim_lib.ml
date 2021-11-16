@@ -1,4 +1,5 @@
 [@@@ocaml.warning "-27"]
+[@@@ocaml.warning "-32"]
 
 open Core
 
@@ -19,8 +20,8 @@ let add_stock (ticker: string) (stocks: stock_price_map): (stock_price_map, stri
   | `Ok stocks_new -> Ok stocks_new
   | `Duplicate -> Error "stock already exists"
 
-let add_player (id: string) (pm: player_map): (player_map, string) result =
-  match Map.add pm ~key:id ~data:{funds = [0.]; stocks = Map.empty (module String)} with
+let add_player (id: string) (st_funds: float) (pm: player_map): (player_map, string) result =
+  match Map.add pm ~key:id ~data:{funds = [st_funds]; stocks = Map.empty (module String)} with
   | `Ok pm_new -> Ok pm_new
   | `Duplicate -> Error "player already exists"
 

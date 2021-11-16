@@ -41,7 +41,7 @@ val add_stock : string -> stock_price_map -> (stock_price_map, string) result
 (*
   Add player to player_map
 *)
-val add_player : string -> player_map -> (player_map, string) result
+val add_player : string -> float -> player_map -> (player_map, string) result
 
 (*
   Player acquires stock from IPO

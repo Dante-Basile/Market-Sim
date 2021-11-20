@@ -12,26 +12,26 @@ type stock_price_map = float list Base.Map.M(Core.String).t
 type stock_ct_map = int list Base.Map.M(Core.String).t
 
 (*
-  Record to store funds and stocks of player
-*)
-type player = { funds : float list; stocks : stock_ct_map; }
-
-(*
-  Maps id to player
-  string -> player
-*)
-type player_map = player Base.Map.M(Core.String).t
-
-(*
   Record to store details of order
 *)
-type order = { id : string; ct : int; value : float; }
+type order = { ticker: string; ct : int; value : float; p_id : string }
 
 (*
   Maps ticker to list of relevant order tuples
   string -> order list 
 *)
 type order_map = order list Base.Map.M(Core.String).t
+
+(*
+  Record to store funds and stocks of player
+*)
+type player = { funds : float list; stocks : stock_ct_map; unf_orders : (order * int) list; order_ct : int }
+
+(*
+  Maps id to player
+  string -> player
+*)
+type player_map = player Base.Map.M(Core.String).t
 
 (*
   Add stock to stock_price_map
@@ -46,19 +46,19 @@ val add_player : string -> float -> player_map -> (player_map, string) result
 (*
   Player acquires stock from IPO
 *)
-val buy_ipo : string -> order -> stock_price_map -> player_map
+val buy_ipo : order -> stock_price_map -> player_map
   -> (player_map, string) result
 
 (*
   Attempt to find an ask matching this bid and conduct the transaction
 *)
-val offer_bid : string -> order -> order_map -> stock_price_map -> player_map
+val offer_bid : order -> order_map -> stock_price_map -> player_map
   -> (order_map * stock_price_map * player_map, string) result
 
 (*
   Attempt to find a bid matching this ask and conduct the transaction
 *)
-val offer_ask : string -> order -> order_map -> stock_price_map -> player_map
+val offer_ask : order -> order_map -> stock_price_map -> player_map
   -> (order_map * stock_price_map * player_map, string) result
 
 (*

@@ -25,7 +25,7 @@ type order_map = order list Base.Map.M(Core.String).t
 (*
   Record to store funds and stocks of player
 *)
-type player = { funds : float list; stocks : stock_ct_map; unf_orders : (order * int) list; order_ct : int }
+type player = { funds : float list; stocks : stock_ct_map }
 
 (*
   Maps id to player

@@ -1,5 +1,4 @@
 [@@@ocaml.warning "-27"]
-[@@@ocaml.warning "-32"]
 
 open Core
 
@@ -11,10 +10,7 @@ type order = {ticker: string; ct: int; value: float; p_id: string;}
 
 type order_map = order list Map.M(String).t
 
-(*
-TODO: need unf orders and ct?
-*)
-type player = {funds: float list; stocks: stock_ct_map; unf_orders: (order * int) list; order_ct: int}
+type player = {funds: float list; stocks: stock_ct_map}
 
 type player_map = player Map.M(String).t 
 
@@ -24,7 +20,7 @@ let add_stock (ticker: string) (stocks: stock_price_map): (stock_price_map, stri
   | `Duplicate -> Error "stock already exists"
 
 let add_player (id: string) (st_funds: float) (pm: player_map): (player_map, string) result =
-  match Map.add pm ~key:id ~data:{funds = [st_funds]; stocks = Map.empty (module String); unf_orders = []; order_ct = 0} with
+  match Map.add pm ~key:id ~data:{funds = [st_funds]; stocks = Map.empty (module String)} with
   | `Ok pm_new -> Ok pm_new
   | `Duplicate -> Error "player already exists"
 
@@ -58,7 +54,7 @@ let buy_ipo (o: order) (stocks: stock_price_map) (players: player_map): (player_
       if Float.(>=) new_amt 0. then
         let new_funds = new_amt :: p.funds in
         let new_stocks = Map.update p.stocks o.ticker ~f:(inc_stock_ct o.ct) in
-        let new_player = {funds = new_funds; stocks = new_stocks; unf_orders = p.unf_orders; order_ct = p.order_ct} in
+        let new_player = {funds = new_funds; stocks = new_stocks} in
         Ok (Map.set players ~key:o.p_id ~data:new_player)
       else
         Error "insufficient funds"
@@ -110,11 +106,11 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
         | Some l_asks -> 
           let matched_asks, new_l_asks, bid_r = scan_asks l_asks o [] in
           let new_bids = add_bid bids bid_r in
-          let new_players = execute_bids matched_bids in
-          (new_bids, new_asks, new_players)
+          let new_asks, new_stocks, new_players = execute_bids bids asks players p matched_asks in
+          (new_bids, new_asks, new_stocks, new_players)
         | None ->
           let new_bids = add_bid bids o in
-          (new_bids, asks, players)
+          (new_bids, asks, stocks, players)
       in
       Ok(new_bids, new_asks, new_stocks, new_players)
     | Some stock_price, None -> Error "player does not exist"

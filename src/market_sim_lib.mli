@@ -52,14 +52,14 @@ val buy_ipo : order -> stock_price_map -> player_map
 (*
   Attempt to find an ask matching this bid and conduct the transaction
 *)
-val offer_bid : order -> order_map -> stock_price_map -> player_map
-  -> (order_map * stock_price_map * player_map, string) result
+val offer_bid : order -> order_map -> order_map -> stock_price_map -> player_map
+  -> (order_map * order_map * stock_price_map * player_map, string) result
 
 (*
   Attempt to find a bid matching this ask and conduct the transaction
 *)
-val offer_ask : order -> order_map -> stock_price_map -> player_map
-  -> (order_map * stock_price_map * player_map, string) result
+val offer_ask : order -> order_map -> order_map -> stock_price_map -> player_map
+  -> (order_map * order_map * stock_price_map * player_map, string) result
 
 (*
   Get the current price of a stock

@@ -3,7 +3,7 @@
 
 open Core
 
-type stock_price_map = float list Map.M(String).t
+type stock_price_map = float option list Map.M(String).t
 
 type stock_ct_map = int list Map.M(String).t
 
@@ -16,7 +16,7 @@ type player = {funds: float list; stocks: stock_ct_map}
 type player_map = player Map.M(String).t 
 
 let add_stock (ticker: string) (stocks: stock_price_map): (stock_price_map, string) result =
-  match Map.add stocks ~key:ticker ~data:([]) with
+  match Map.add stocks ~key:ticker ~data:([None]) with
   | `Ok stocks_new -> Ok stocks_new
   | `Duplicate -> Error "stock already exists"
 
@@ -101,14 +101,11 @@ let trade (ticker: string) (bidder: player) (asker: player) (ct: int) (value: fl
 
 (*
 *)
-let update_price (p: float) (l_p: float list option): float list =
+let update_price (p: float option) (l_p: float option list option): float option list =
   match l_p with
   | Some l -> p :: l
   | None -> [p]
 
-(*
-TODO: stock price can be None if all sell orders bought
-*)
 let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_price_map) (players: player_map):
     ((order_map * order_map * stock_price_map * player_map), string) result =
   let rec scan_asks (l_asks: order list) (o: order) (matched_asks: order list): order list * order list * order =
@@ -164,7 +161,11 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
         let new_l_asks, new_players = process_asks new_l_asks players o.p_id p matched_asks in
         let new_l_asks = List.sort new_l_asks ~compare:compare_ask in (* needed? *)
         let new_asks = Map.set asks ~key:o.ticker ~data:new_l_asks in
-        let new_price = (List.hd_exn new_l_asks).value in
+        let new_price =
+          match List.hd new_l_asks with
+          | Some o -> Some o.value
+          | None -> None
+        in
         let new_stocks = Map.update stocks o.ticker ~f:(update_price new_price) in
         (new_bids, new_asks, new_stocks, new_players)
       | None ->

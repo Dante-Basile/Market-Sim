@@ -10,7 +10,7 @@ let test_add_stock _ =
     | Ok stocks -> stocks
     | Error s -> failwith s
   in
-  assert_equal (Map.find_exn stocks_1 "AMD") ([]);
+  assert_equal (Map.find_exn stocks_1 "AMD") ([None]);
   match add_stock "AMD" stocks_1 with
   | Ok _ -> failwith "Error expcted"
   | Error s -> assert_equal s "stock already exists"

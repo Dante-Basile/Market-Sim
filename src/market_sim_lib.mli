@@ -3,7 +3,7 @@
   Maps ticker to list of past and present stock prices
   string -> float list
 *)
-type stock_price_map = float list Base.Map.M(Core.String).t
+type stock_price_map = float option list Base.Map.M(Core.String).t
 
 (*
   Maps ticker to past and present shares owned

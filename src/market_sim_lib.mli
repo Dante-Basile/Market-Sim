@@ -64,7 +64,7 @@ val offer_ask : order -> order_map -> order_map -> stock_price_map -> player_map
 (*
   Get the current price of a stock
 *)
-val get_price : string -> order_map -> (float, string) result
+val get_price : string -> stock_price_map -> (float option, string) result
 
 (*
   Get the highest bid (price a buyer is willing to pay)

@@ -5,7 +5,7 @@ open Core
 
 type stock_price_map = float option list Map.M(String).t
 
-type order = {ticker: string; ct: int; value: float; p_id: string;}
+type order = {ticker: string; ct: int; value: float; p_id: string}
 
 type order_map = order list Map.M(String).t
 
@@ -94,14 +94,7 @@ let trade (ticker: string) (bidder: player) (asker: player) (ct: int) (value: fl
   new_bidder, new_asker
 
 (*
-*)
-let update_price (p: float option) (l_p: float option list option): float option list =
-  match l_p with
-  | Some l -> p :: l
-  | None -> [p]
-
-(*
-  TODO: ensure that over cost and over ct orders are terminated, combine recursive functions
+  TODO: remove use of update for efficiency in offer_bid and offer_ask?
 *)
 let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_price_map) (players: player_map):
     (order_map * order_map * stock_price_map * player_map, string) result =
@@ -132,15 +125,15 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
             else
               l_r
           in
-          let new_bidder, new_asker = trade o_ask.ticker bidder asker max_exchange o_ask.value in
+          let new_bidder, new_asker = trade o.ticker bidder asker max_exchange o_ask.value in
           let new_players = Map.set players ~key:o.p_id ~data:new_bidder in
           let new_players = Map.set new_players ~key:o_ask.p_id ~data:new_asker in
           o_new_opt, l_asks_new, new_players, new_bidder
         in
         process_asks new_players o_new_opt new_bidder l_asks_new
       else
-        (Some o, l_asks, players)
-    | _, _ -> (Some o, l_asks, players)
+        (o_opt, l_asks, players)
+    | o_opt, l_asks -> (o_opt, l_asks, players)
   in
   match Map.find stocks o.ticker, Map.find players o.p_id with
   | Some stock_price, Some p ->
@@ -159,22 +152,56 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
           | Some o -> Some o.value
           | None -> None
         in
-        let new_stocks = Map.update stocks o.ticker ~f:(update_price new_price) in
+        let new_stocks = Map.set stocks ~key:o.ticker ~data:(new_price :: stock_price) in
         (new_bids, new_asks, new_stocks, new_players)
       | None ->
         let new_bids = add_bid bids o in
         (new_bids, asks, stocks, players)
     in
     Ok(new_bids, new_asks, new_stocks, new_players)
-  | Some stock_price, None -> Error "player does not exist"
-  | None, Some p -> Error "stock not listed on market"
+  | Some _, None -> Error "player does not exist"
+  | None, Some _ -> Error "stock not listed on market"
   | None, None -> Error "stock not listed on market and player does not exist"
 
-(*
-TODO: also check if stock enough stock owned
-*)
 let offer_ask (o: order) (bids: order_map) (asks: order_map) (stocks: stock_price_map) (players: player_map):
     (order_map * order_map * stock_price_map * player_map, string) result =
+  let rec process_bids (players: player_map) (o_opt: order option) (asker: player) (l_bids: order list):
+      order option * order list * player_map =
+    match o_opt, l_bids with (* l_bids is sorted by decreasing value, check still true in new *)
+    | Some o, o_bid :: l_r ->
+      if Float.(<=) o.value o_bid.value then
+        let o_new_opt, l_bids_new, new_players, new_asker =
+          let bidder = Map.find_exn players o_bid.p_id in
+          let bidder_funds_current = List.hd_exn bidder.funds in
+          let bidder_afforded = Float.iround_towards_zero_exn (bidder_funds_current /. o.value) in
+          let asker_owned = Map.find_exn asker.stocks o.ticker in
+          let asker_owned_current = List.hd_exn asker_owned in
+          let max_order_exchange = Int.min o_bid.ct o.ct in
+          let max_afford_exchange = Int.min bidder_afforded max_order_exchange in
+          let max_owned_exchange = Int.min asker_owned_current max_order_exchange in
+          let max_exchange = Int.min max_afford_exchange max_owned_exchange in
+          let o_new_opt =
+            if o.ct > max_exchange && max_owned_exchange >= max_exchange then
+              Some {ticker = o.ticker; ct = o.ct - max_exchange; value = o.value; p_id = o.p_id}
+            else
+              None
+          in
+          let l_bids_new =
+            if o_bid.ct > max_exchange && max_afford_exchange >= max_exchange then
+              {ticker = o_bid.ticker; ct = o_bid.ct - max_exchange; value = o_bid.value; p_id = o_bid.p_id} :: l_r
+            else
+              l_r
+          in
+          let new_bidder, new_asker = trade o.ticker bidder asker max_exchange o.value in
+          let new_players = Map.set players ~key:o.p_id ~data:new_asker in
+          let new_players = Map.set new_players ~key:o_bid.p_id ~data:new_bidder in
+          o_new_opt, l_bids_new, new_players, new_bidder
+        in
+        process_bids new_players o_new_opt new_asker l_bids_new
+      else
+        (o_opt, l_bids, players)
+    | o_opt, l_bids -> (o_opt, l_bids, players)
+  in
   match Map.find stocks o.ticker, Map.find players o.p_id with
   | Some stock_price, Some p ->
     begin
@@ -185,33 +212,37 @@ let offer_ask (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
         let new_bids, new_asks, new_stocks, new_players =
           match Map.find bids o.ticker with
           | Some l_bids -> 
-            let matched_bids, new_l_bids, ask_r = scan_asks l_asks o [] in
-            let new_bids = add_bid bids bid_r in
-            let new_l_asks, new_players = process_asks new_l_asks players o.p_id p matched_asks in
-            let new_l_asks = List.sort new_l_asks ~compare:compare_ask in (* needed? *)
-            let new_asks = Map.set asks ~key:o.ticker ~data:new_l_asks in
+            let o_new_opt, new_l_bids, new_players = process_bids players (Some o) p l_bids in
+            let new_asks =
+              match o_new_opt with
+              | Some o_new -> add_ask asks o_new
+              | None -> asks
+            in
+            let new_bids = Map.set bids ~key:o.ticker ~data:new_l_bids in
             let new_price =
-              match List.hd new_l_asks with
+              match List.hd (Map.find_exn new_asks o.ticker) with
               | Some o -> Some o.value
               | None -> None
             in
-            let new_stocks = Map.update stocks o.ticker ~f:(update_price new_price) in
+            let new_stocks = Map.set stocks ~key:o.ticker ~data:(new_price :: stock_price) in
             (new_bids, new_asks, new_stocks, new_players)
           | None ->
-            let new_bids = add_bid bids o in
-            (new_bids, asks, stocks, players)
+            let new_asks = add_bid asks o in
+            (bids, new_asks, stocks, players)
         in
         Ok(new_bids, new_asks, new_stocks, new_players)
       else
         Error "player ownes 0 shares of this stock"
     | None -> Error "player has never owned this stock"
     end
-  | Some stock_price, None -> Error "player does not exist"
-  | None, Some p -> Error "stock not listed on market"
+  | Some _, None -> Error "player does not exist"
+  | None, Some _ -> Error "stock not listed on market"
   | None, None -> Error "stock not listed on market and player does not exist"
 
-let get_price (ticker: string) (asks: order_map): (float, string) result =
-  failwith "unimplemented"
+let get_price (ticker: string) (stocks: stock_price_map): (float option, string) result =
+  match Map.find stocks ticker with
+  | Some l -> Ok (List.hd_exn l)
+  | None -> Error "stock not listed on market"
 
 let get_bid_ask (ticker: string): ((float * float), string) result =
   failwith "unimplemented"

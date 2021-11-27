@@ -70,13 +70,66 @@ let test_buy_ipo _ =
   match buy_ipo {ticker = "AMD"; ct = 1000; value = 10.; p_id = "P1"} stocks_1 players_3 with
   | Ok _ -> failwith "error expected"
   | Error s -> assert_equal s "insufficient funds";
+  match buy_ipo {ticker = "AMZN"; ct = 1; value = 1.; p_id = "P2"} stocks_1 players_3 with
+  | Ok _ -> failwith "error expected"
+  | Error s -> assert_equal s "stock not listed on market and player does not exist"
+;;
+
+let test_offer_bid_ask _ =
+  let (stocks: stock_price_map) = Map.empty (module String) in
+  let (players: player_map) = Map.empty (module String) in
+  let (bids: order_map) = Map.empty (module String) in
+  let (asks: order_map) = Map.empty (module String) in
+  let stocks_0 =
+    match add_stock "AMD" stocks with
+    | Ok stocks -> stocks
+    | Error s -> failwith s
+  in
+  let players_0 =
+    match add_player "P1" 1000. players with
+    | Ok players -> players
+    | Error s -> failwith s
+  in
+  let bids_0, asks_0, stocks_0, players_0 =
+    match offer_bid {ticker = "AMD"; ct = 10; value = 10.; p_id = "P1"} bids asks stocks_0 players_0 with
+    | Ok (bids, asks, stocks, players) -> bids, asks, stocks, players
+    | Error s -> failwith s
+  in
+  assert_equal (get_price "AMD" stocks_0) (Ok None);
+  assert_equal (Map.find_exn bids_0 "AMD") [{ticker = "AMD"; ct = 10; value = 10.; p_id = "P1"}];
+  let players_0 =
+    match add_player "P2" 1000. players_0 with
+    | Ok players -> players
+    | Error s -> failwith s
+  in
+  let players_0 =
+    match buy_ipo {ticker = "AMD"; ct = 100; value = 1.; p_id = "P2";} stocks_0 players_0 with
+    | Ok players -> players
+    | Error s -> failwith s
+  in
+  let bids_0, asks_0, stocks_0, players_0 =
+    match offer_ask {ticker = "AMD"; ct = 10; value = 15.; p_id = "P2"} bids_0 asks_0 stocks_0 players_0 with
+    | Ok (bids, asks, stocks, players) -> bids, asks, stocks, players
+    | Error s -> failwith s
+  in
+  assert_equal (get_price "AMD" stocks_0) (Ok (Some 15.));
+  assert_equal (Map.find_exn asks_0 "AMD") [{ticker = "AMD"; ct = 10; value = 15.; p_id = "P2"}];
+  let bids_0, asks_0, stocks_0, _ =
+    match offer_ask {ticker = "AMD"; ct = 10; value = 10.; p_id = "P2"} bids_0 asks_0 stocks_0 players_0 with
+    | Ok (bids, asks, stocks, players) -> bids, asks, stocks, players
+    | Error s -> failwith s
+  in
+  assert_equal (get_price "AMD" stocks_0) (Ok (Some 15.));
+  assert_equal (Map.find_exn bids_0 "AMD") [];
+  assert_equal (Map.find_exn asks_0 "AMD") [{ticker = "AMD"; ct = 10; value = 15.; p_id = "P2"}];
 ;;
 
 let market_sim_tests =
   "market sim" >: test_list [
-    "add stock"     >:: test_add_stock;
-    "add player"    >:: test_add_player;
-    "buy ipo"       >:: test_buy_ipo
+    "add stock"                 >:: test_add_stock;
+    "add player"                >:: test_add_player;
+    "buy ipo"                   >:: test_buy_ipo;
+    "offer bid and offer ask"   >:: test_offer_bid_ask;
   ]
 
 let test_series =

@@ -1,5 +1,7 @@
-[@@@ocaml.warning "-27"]
-[@@@ocaml.warning "-32"]
+(*
+[@@@ocaml.warning "-27"] (* unused variable *)
+[@@@ocaml.warning "-32"] (* unused function *)
+*)
 
 open Core
 
@@ -158,11 +160,14 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
         let new_bids = add_bid bids o in
         (new_bids, asks, stocks, players)
     in
-    Ok(new_bids, new_asks, new_stocks, new_players)
+    Ok (new_bids, new_asks, new_stocks, new_players)
   | Some _, None -> Error "player does not exist"
   | None, Some _ -> Error "stock not listed on market"
   | None, None -> Error "stock not listed on market and player does not exist"
 
+(*
+TODO: only update price if new_asks is different from asks
+*)
 let offer_ask (o: order) (bids: order_map) (asks: order_map) (stocks: stock_price_map) (players: player_map):
     (order_map * order_map * stock_price_map * player_map, string) result =
   let rec process_bids (players: player_map) (o_opt: order option) (asker: player) (l_bids: order list):
@@ -220,17 +225,19 @@ let offer_ask (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
             in
             let new_bids = Map.set bids ~key:o.ticker ~data:new_l_bids in
             let new_price =
-              match List.hd (Map.find_exn new_asks o.ticker) with
+              match Map.find_exn new_asks o.ticker |> List.hd with
               | Some o -> Some o.value
               | None -> None
             in
             let new_stocks = Map.set stocks ~key:o.ticker ~data:(new_price :: stock_price) in
             (new_bids, new_asks, new_stocks, new_players)
           | None ->
-            let new_asks = add_bid asks o in
-            (bids, new_asks, stocks, players)
+            let new_asks = add_ask asks o in
+            let new_price = Some ((Map.find_exn new_asks o.ticker |> List.hd_exn).value) in
+            let new_stocks = Map.set stocks ~key:o.ticker ~data:(new_price :: stock_price) in
+            (bids, new_asks, new_stocks, players)
         in
-        Ok(new_bids, new_asks, new_stocks, new_players)
+        Ok (new_bids, new_asks, new_stocks, new_players)
       else
         Error "player ownes 0 shares of this stock"
     | None -> Error "player has never owned this stock"
@@ -244,8 +251,32 @@ let get_price (ticker: string) (stocks: stock_price_map): (float option, string)
   | Some l -> Ok (List.hd_exn l)
   | None -> Error "stock not listed on market"
 
-let get_bid_ask (ticker: string): ((float * float), string) result =
-  failwith "unimplemented"
+let get_player_info (p_id: string) (players: player_map): (float * (string * int) list, string) result =
+  let get_current_ct (kvp: string * int list): string * int =
+    let k, v = kvp in
+    (k, List.hd_exn v)
+  in
+  match Map.find players p_id with
+  | Some p -> Ok (List.hd_exn p.funds, Map.to_alist p.stocks |> List.map ~f:get_current_ct)
+  | None -> Error "player does not exist"
 
-let get_bid_ask_spread (ticker: string): (float, string) result =
-  failwith "unimplemented"
+let get_bid_ask (ticker: string) (bids: order_map) (asks: order_map): float option * float option =
+  let get_l_val (m: order_map) (t: string): float option =
+    match Map.find m t with
+    | Some l ->
+      let v = 
+        match List.hd l with
+        | Some hd -> Some hd.value
+        | None -> None
+      in
+      v
+    | None -> None
+  in
+  (get_l_val bids ticker, get_l_val asks ticker)
+  
+let get_bid_ask_spread (ticker: string) (bids: order_map) (asks: order_map): (float, string) result =
+  match get_bid_ask ticker bids asks with
+  | Some bid, Some ask -> Ok (ask -. bid)
+  | Some _, None -> Error "no acitve ask"
+  | None, Some _ -> Error "no active bid"
+  | None, None -> Error "no active bid or ask"

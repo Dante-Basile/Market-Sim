@@ -1,7 +1,8 @@
 (*
   Contains a ticker for all companies listed on the market
   Maps ticker to list of past and present stock prices
-  string -> float list
+  Stock price is None if the stock was offered in the past but is not currently offered
+  string -> float option list
 *)
 type stock_price_map = float option list Base.Map.M(Core.String).t
 
@@ -32,6 +33,12 @@ type player = { funds : float list; stocks : stock_ct_map }
   string -> player
 *)
 type player_map = player Base.Map.M(Core.String).t
+
+(*
+  Maps ticker to public opinion
+  string -> int list
+*)
+type opinion_map = int list Base.Map.M(Core.String).t
 
 (*
   Add stock to stock_price_map
@@ -82,3 +89,13 @@ val get_bid_ask : string -> order_map -> order_map -> float option * float optio
   Get the difference between the bid and ask: ask - bid
 *)
 val get_bid_ask_spread : string -> order_map -> order_map -> (float, string) result
+
+(*
+  Trigger random shift in opinion
+*)
+val random_shift_opinion : opinion_map -> stock_price_map -> opinion_map
+
+(*
+  Get current public opinion of stock
+*)
+val get_opinion : string -> opinion_map -> (int, string) result

@@ -15,7 +15,9 @@ type stock_ct_map = int list Map.M(String).t
 
 type player = {funds: float list; stocks: stock_ct_map}
 
-type player_map = player Map.M(String).t 
+type player_map = player Map.M(String).t
+
+type opinion_map = int list Base.Map.M(Core.String).t
 
 let add_stock (ticker: string) (stocks: stock_price_map): (stock_price_map, string) result =
   match Map.add stocks ~key:ticker ~data:([None]) with
@@ -280,3 +282,20 @@ let get_bid_ask_spread (ticker: string) (bids: order_map) (asks: order_map): (fl
   | Some _, None -> Error "no acitve ask"
   | None, Some _ -> Error "no active bid"
   | None, None -> Error "no active bid or ask"
+
+let random_shift_opinion (opinions: opinion_map) (stocks: stock_price_map): opinion_map =
+  let k = Map.keys stocks in
+  let k_len = List.length k in
+  if k_len > 0 then
+    let k_rand = k_len |> Random.int |> List.nth_exn k in
+    let new_op = (Random.int 21 - 10) in
+    match Map.find opinions k_rand with
+    | Some v -> Map.set ~key:k_rand ~data:(new_op :: v) opinions
+    | None -> Map.set ~key:k_rand ~data:[new_op] opinions
+  else
+    opinions
+
+let get_opinion (ticker: string) (opinions: opinion_map): (int, string) result =
+  match Map.find opinions ticker with
+  | Some o -> Ok (List.hd_exn o)
+  | None -> Error "public opinion of this stock is unknown"

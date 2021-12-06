@@ -89,8 +89,12 @@ let add_ask = add_order compare_ask
 (*
 *)
 let trade (ticker: string) (bidder: player) (asker: player) (ct: int) (value: float): player * player =
-  let new_bidder_funds = (List.hd_exn bidder.funds -. ((Float.of_int ct) *. value)) :: bidder.funds in
-  let new_asker_funds = (List.hd_exn asker.funds +. ((Float.of_int ct) *. value)) :: asker.funds in
+  let new_bidder_funds =
+    (List.hd_exn bidder.funds -. ((Float.of_int ct) *. value))
+    :: bidder.funds in
+  let new_asker_funds =
+    (List.hd_exn asker.funds +. ((Float.of_int ct) *. value))
+    :: asker.funds in
   let new_bidder_stocks = Map.update bidder.stocks ticker ~f:(inc_stock_ct ct) in
   let new_asker_stocks = Map.update asker.stocks ticker ~f:(inc_stock_ct (-1 * ct)) in
   let new_bidder = {funds = new_bidder_funds; stocks = new_bidder_stocks} in
@@ -109,7 +113,9 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
       if Float.(>=) o.value o_ask.value then
         let o_new_opt, l_asks_new, new_players, new_bidder =
           let bidder_funds_current = List.hd_exn bidder.funds in
-          let bidder_afforded = Float.iround_towards_zero_exn (bidder_funds_current /. o_ask.value) in
+          let bidder_afforded =
+            bidder_funds_current /. o_ask.value
+            |> Float.iround_towards_zero_exn in
           let asker = Map.find_exn players o_ask.p_id in
           let asker_owned = Map.find_exn asker.stocks o_ask.ticker in
           let asker_owned_current = List.hd_exn asker_owned in
@@ -125,7 +131,8 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
           in
           let l_asks_new =
             if o_ask.ct > max_exchange && max_owned_exchange >= max_exchange then
-              {ticker = o_ask.ticker; ct = o_ask.ct - max_exchange; value = o_ask.value; p_id = o_ask.p_id} :: l_r
+              {ticker = o_ask.ticker; ct = o_ask.ct - max_exchange; value = o_ask.value;
+              p_id = o_ask.p_id} :: l_r
             else
               l_r
           in
@@ -180,7 +187,10 @@ let offer_ask (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
         let o_new_opt, l_bids_new, new_players, new_asker =
           let bidder = Map.find_exn players o_bid.p_id in
           let bidder_funds_current = List.hd_exn bidder.funds in
-          let bidder_afforded = Float.iround_towards_zero_exn (bidder_funds_current /. o.value) in
+          let bidder_afforded =
+            (bidder_funds_current /. o.value)
+            |> Float.iround_towards_zero_exn
+          in
           let asker_owned = Map.find_exn asker.stocks o.ticker in
           let asker_owned_current = List.hd_exn asker_owned in
           let max_order_exchange = Int.min o_bid.ct o.ct in
@@ -195,7 +205,8 @@ let offer_ask (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
           in
           let l_bids_new =
             if o_bid.ct > max_exchange && max_afford_exchange >= max_exchange then
-              {ticker = o_bid.ticker; ct = o_bid.ct - max_exchange; value = o_bid.value; p_id = o_bid.p_id} :: l_r
+              {ticker = o_bid.ticker; ct = o_bid.ct - max_exchange; value = o_bid.value;
+              p_id = o_bid.p_id} :: l_r
             else
               l_r
           in
@@ -266,7 +277,7 @@ let get_bid_ask (ticker: string) (bids: order_map) (asks: order_map): float opti
   let get_l_val (m: order_map) (t: string): float option =
     match Map.find m t with
     | Some l ->
-      let v = 
+      let v =
         match List.hd l with
         | Some hd -> Some hd.value
         | None -> None
@@ -275,7 +286,7 @@ let get_bid_ask (ticker: string) (bids: order_map) (asks: order_map): float opti
     | None -> None
   in
   (get_l_val bids ticker, get_l_val asks ticker)
-  
+
 let get_bid_ask_spread (ticker: string) (bids: order_map) (asks: order_map): (float, string) result =
   match get_bid_ask ticker bids asks with
   | Some bid, Some ask -> Ok (ask -. bid)
@@ -284,14 +295,17 @@ let get_bid_ask_spread (ticker: string) (bids: order_map) (asks: order_map): (fl
   | None, None -> Error "no active bid or ask"
 
 let random_shift_opinion (opinions: opinion_map) (stocks: stock_price_map): opinion_map =
+  let add_opinion (v: int list option): int list =
+    let new_op = (Random.int 21 - 10) in
+    match v with
+    | Some l -> new_op :: l
+    | None -> [new_op]
+  in
   let k = Map.keys stocks in
   let k_len = List.length k in
   if k_len > 0 then
     let k_rand = k_len |> Random.int |> List.nth_exn k in
-    let new_op = (Random.int 21 - 10) in
-    match Map.find opinions k_rand with
-    | Some v -> Map.set ~key:k_rand ~data:(new_op :: v) opinions
-    | None -> Map.set ~key:k_rand ~data:[new_op] opinions
+    Map.update opinions k_rand ~f:add_opinion
   else
     opinions
 

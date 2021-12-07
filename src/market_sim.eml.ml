@@ -30,6 +30,16 @@ let render_home ?action request =
         <h1>Add stock: </h1>
 %     | "add player" -> 
         <h1>Add player: </h1>
+%     | "add buy ipo" -> 
+        <h1>Buy IPO: </h1>
+%     | "bid offer" -> 
+        <h1>Bid offer: </h1>
+%     | "ask offer" -> 
+        <h1>Ask offer: </h1>
+%     | "get price" -> 
+        <h1>Get price: </h1>
+%     | "get player" -> 
+        <h1>Get player: </h1>
 %     | _ -> 
       <p>Invalid option</p>
       <%s! Dream.form_tag ~action:"/" request %>

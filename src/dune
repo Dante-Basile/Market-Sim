@@ -3,7 +3,7 @@
   (modules
     market_sim_lib)
   (libraries
-    core)
+    core dream)
   (preprocess (pps ppx_jane bisect_ppx)))
 
 (executable
@@ -16,4 +16,9 @@
     stdio
     yojson
     ppx_deriving_yojson.runtime)
-  (preprocess (pps ppx_deriving_yojson)))
+  (preprocess (pps ppx_deriving_yojson lwt_ppx)))
+
+(rule
+  (targets market_sim.ml)
+  (deps market_sim.eml.ml)
+  (action (run dream_eml %{deps} --workspace %{workspace_root})))

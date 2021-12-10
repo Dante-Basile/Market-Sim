@@ -4,12 +4,20 @@
 open Market_sim_lib;;
 open Core;;
 
-let (stocks: stock_price_map) = Map.empty (module String);;
-let (bids: order_map) = Map.empty (module String);;
-let (asks: order_map) = Map.empty (module String);;
-let (players: player_map) = Map.empty (module String);;
-let (opinions: opinion_map) = Map.empty (module String);;
-let cur_player = "";;
+(* let (stocks: stock_price_map) = Map.empty (module String);;
+let (bids: order_map) = ref Map.empty (module String);;
+let (asks: order_map) = ref Map.empty (module String);;
+let (players: player_map) = ref Map.empty (module String);;
+let (opinions: opinion_map) = ref Map.empty (module String);;
+let cur_player = ref "";; *)
+
+
+let stocks = ref (Map.empty (module String));;
+(* let bids = ref (Map.empty (module String));;
+let asks = ref (Map.empty (module String));; *)
+let players = ref (Map.empty (module String));;
+(* let opinions = ref (Map.empty (module String));; *)
+let cur_player = ref "";;
 
 let render_stock ?duplicate request =
   <html>
@@ -65,7 +73,25 @@ let render_player ~(duplicate: bool) ~(approved_player: string option) request =
   </body>
   </html> 
 
-let render_home ?invalid_choice stocks players request =
+let render_buy_ipo request =
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock Market Simulator</title>
+  </head>
+  <body>
+    <h1>Buy IPO</h1>
+
+    <p>Please enter IPO order request in form "STOCK|COUNT|PURCHASE_VALUE|PLAYER_NAME"</p>
+    <%s! Dream.form_tag ~action:"/" request %>
+      <input name="ipo_order" autofocus>
+    </form>
+      
+  </body>
+  </html> 
+
+let render_home ?msg stocks players request =
   <html>
   <head>
     <meta charset="UTF-8">
@@ -75,9 +101,9 @@ let render_home ?invalid_choice stocks players request =
   <body>
     <h1>Stock Market Simulator</h1>
 
-%   begin match invalid_choice with
-%   | Some true ->
-      <p>Invalid option</p>
+%   begin match msg with
+%   | Some m ->
+      <p><%s m %></p>
 %   | _ -> ()
 %   end;
 
@@ -113,39 +139,66 @@ let () =
 
     Dream.get  "/"
       (fun request ->
-        Dream.html (render_home stocks players request));
+        Dream.html (render_home !stocks !players request));
 
     Dream.post "/"
-      (fun request ->
+      begin
+      fun request ->
         match%lwt Dream.form request with
         | `Ok ["action", action] ->
           begin match String.lowercase action with
           | "add stock" -> Dream.html (render_stock request)
           | "add player" -> Dream.html (render_player ~duplicate:false ~approved_player:None request)
-          | _ -> Dream.html (render_home ~invalid_choice:true stocks players request)
+          | "buy ipo" -> Dream.html (render_buy_ipo request)
+          | _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
           end
         | `Ok ["stock_name", stock_name] -> 
-          begin match add_stock stock_name stocks with
+          begin match add_stock stock_name !stocks with
           | Ok updated_stock -> 
-            let stocks = updated_stock in Dream.html (render_home stocks players request)
+            stocks := updated_stock;
+            Dream.html (render_home !stocks !players request)
           | Error _ -> Dream.html (render_stock ~duplicate:true request)
           end
         | `Ok ["player_name", player_name] -> 
-          let player_list = Map.keys players in
+          let player_list = Map.keys !players in
           begin match List.find player_list ~f:(fun p -> String.(=) p player_name) with
-          | None -> let cur_player = player_name in Dream.html (render_player ~duplicate:false ~approved_player:(Some player_name) request)
+          | None -> 
+            cur_player := player_name; 
+            Dream.html (render_player ~duplicate:false ~approved_player:(Some player_name) request)
           | Some _ -> Dream.html (render_player ~duplicate:true ~approved_player:None request) (* player already exists *)
           end
         | `Ok ["player_funds", player_funds] ->
           let f = float_of_string player_funds in
-          begin match add_player cur_player f players with
-          | Ok updated_players -> let players = updated_players in Dream.html (render_home stocks players request)
+          begin match add_player !cur_player f !players with
+          | Ok updated_players -> 
+            players := updated_players;
+            Dream.html (render_home !stocks !players request)
           | Error _ -> failwith "duplicate player not caught in player_name match"
           end
-        | `Ok _ -> Dream.html (render_home ~invalid_choice:true stocks players request)
-        | _ -> Dream.empty `Bad_Request);
+        | `Ok ["ipo_order", ipo_order] -> 
+          let o = 
+            String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] ipo_order
+            |> List.filter ~f:(fun x -> String.(<>) x "")
+          in
+          begin match o with
+          | [ticker; ct; value; p_id] -> 
+            let order = {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} in
+            begin match buy_ipo order !stocks !players with 
+            | Ok updated_players ->
+              players := updated_players;
+              Dream.html (render_home !stocks !players request)
+            | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
+            end
+          | _ -> Dream.html (render_home ~msg:"Invalid IPO order" !stocks !players request)
+          end
+        | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
+        | _ -> Dream.empty `Bad_Request
+      end;
         
 
 
   ]
   @@ Dream.not_found
+
+  (* to do:
+  - catch error where player fund is not float *)

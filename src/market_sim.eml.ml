@@ -109,6 +109,24 @@ let render_offer_bid request =
   </body>
   </html> 
 
+let render_offer_ask request =
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock Market Simulator</title>
+  </head>
+  <body>
+    <h1>Ask Offer</h1>
+
+    <p>Please enter ask offer request in form "STOCK|COUNT|PURCHASE_VALUE|PLAYER_NAME"</p>
+    <%s! Dream.form_tag ~action:"/" request %>
+      <input name="ask_offer" autofocus>
+    </form>
+      
+  </body>
+  </html> 
+
 let render_home ?msg stocks players request =
   <html>
   <head>
@@ -173,6 +191,7 @@ let () =
           | "add player" -> Dream.html (render_player ~duplicate:false ~approved_player:None request)
           | "buy ipo" -> Dream.html (render_buy_ipo request)
           | "bid offer" -> Dream.html (render_offer_bid request)
+          | "ask offer" -> Dream.html (render_offer_ask request)
           | _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
           end
         | `Ok ["stock_name", stock_name] -> 
@@ -225,9 +244,24 @@ let () =
               Dream.html (render_home !stocks !players request)
             | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
             end
-          | _ -> Dream.html (render_home ~msg:"Invalid IPO order" !stocks !players request)
+          | _ -> Dream.html (render_home ~msg:"Invalid bid order" !stocks !players request)
           end
-
+        | `Ok ["ask_offer", ask_offer] -> 
+          let o = format_order ask_offer in
+          begin match o with
+          | [ticker; ct; value; p_id] -> 
+            let order = {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} in
+            begin match offer_ask order !bids !asks !stocks !players with 
+            | Ok (updated_bids, updated_asks, updated_stocks, updated_players) ->
+              bids := updated_bids;
+              asks := updated_asks;
+              stocks := updated_stocks;
+              players := updated_players;
+              Dream.html (render_home !stocks !players request)
+            | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
+            end
+          | _ -> Dream.html (render_home ~msg:"Invalid ask order" !stocks !players request)
+          end
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request
       end;

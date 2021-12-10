@@ -13,8 +13,8 @@ let cur_player = ref "";; *)
 
 
 let stocks = ref (Map.empty (module String));;
-(* let bids = ref (Map.empty (module String));;
-let asks = ref (Map.empty (module String));; *)
+let bids = ref (Map.empty (module String));;
+let asks = ref (Map.empty (module String));;
 let players = ref (Map.empty (module String));;
 (* let opinions = ref (Map.empty (module String));; *)
 let cur_player = ref "";;
@@ -91,6 +91,24 @@ let render_buy_ipo request =
   </body>
   </html> 
 
+let render_offer_bid request =
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock Market Simulator</title>
+  </head>
+  <body>
+    <h1>Bid Offer</h1>
+
+    <p>Please enter bid offer request in form "STOCK|COUNT|PURCHASE_VALUE|PLAYER_NAME"</p>
+    <%s! Dream.form_tag ~action:"/" request %>
+      <input name="bid_offer" autofocus>
+    </form>
+      
+  </body>
+  </html> 
+
 let render_home ?msg stocks players request =
   <html>
   <head>
@@ -128,6 +146,10 @@ let render_home ?msg stocks players request =
   </body>
   </html> 
 
+let format_order (order: string) : string list = 
+  String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] order
+  |> List.filter ~f:(fun x -> String.(<>) x "")
+
 (*
   main:
 *)
@@ -150,6 +172,7 @@ let () =
           | "add stock" -> Dream.html (render_stock request)
           | "add player" -> Dream.html (render_player ~duplicate:false ~approved_player:None request)
           | "buy ipo" -> Dream.html (render_buy_ipo request)
+          | "bid offer" -> Dream.html (render_offer_bid request)
           | _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
           end
         | `Ok ["stock_name", stock_name] -> 
@@ -176,10 +199,7 @@ let () =
           | Error _ -> failwith "duplicate player not caught in player_name match"
           end
         | `Ok ["ipo_order", ipo_order] -> 
-          let o = 
-            String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] ipo_order
-            |> List.filter ~f:(fun x -> String.(<>) x "")
-          in
+          let o = format_order ipo_order in
           begin match o with
           | [ticker; ct; value; p_id] -> 
             let order = {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} in
@@ -191,6 +211,23 @@ let () =
             end
           | _ -> Dream.html (render_home ~msg:"Invalid IPO order" !stocks !players request)
           end
+        | `Ok ["bid_offer", bid_offer] -> 
+          let o = format_order bid_offer in
+          begin match o with
+          | [ticker; ct; value; p_id] -> 
+            let order = {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} in
+            begin match offer_bid order !bids !asks !stocks !players with 
+            | Ok (updated_bids, updated_asks, updated_stocks, updated_players) ->
+              bids := updated_bids;
+              asks := updated_asks;
+              stocks := updated_stocks;
+              players := updated_players;
+              Dream.html (render_home !stocks !players request)
+            | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
+            end
+          | _ -> Dream.html (render_home ~msg:"Invalid IPO order" !stocks !players request)
+          end
+
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request
       end;

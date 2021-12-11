@@ -127,7 +127,45 @@ let render_offer_ask request =
   </body>
   </html> 
 
-let render_home ?msg stocks players request =
+let render_get_price request =
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock Market Simulator</title>
+  </head>
+  <body>
+    <h1>Get Stock Price</h1>
+
+    <p>Please enter stock</p>
+    <%s! Dream.form_tag ~action:"/" request %>
+      <input name="stock_get_price" autofocus>
+    </form>
+      
+  </body>
+  </html> 
+
+let render_get_player_info request =
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock Market Simulator</title>
+  </head>
+  <body>
+    <h1>Get Player Info</h1>
+
+    <p>Please enter player name</p>
+    <%s! Dream.form_tag ~action:"/" request %>
+      <input name="player_name_info" autofocus>
+    </form>
+      
+  </body>
+  </html> 
+
+(* let test = (5000., [("AAPL", 5);("QQQ", 10)]);; *)
+
+let render_home ?msg ?res stocks players request =
   <html>
   <head>
     <meta charset="UTF-8">
@@ -143,6 +181,15 @@ let render_home ?msg stocks players request =
 %   | _ -> ()
 %   end;
 
+%   begin match res with
+%   | Some (p_funds, p_stocks) -> 
+      <p>Funds: <%s string_of_float p_funds%></p>
+      <% List.iter p_stocks ~f:begin fun (s, n) -> %>
+        <p>Stock: <%s s %> Count: <%s string_of_int n %></p>
+      <% end; %>
+%   | _ -> ()
+%   end;
+
   <%s! Dream.form_tag ~action:"/" request %>
   <p>Please choose one of the following options and indicate your choice below: </p>
   <li>Add stock</li>
@@ -150,11 +197,13 @@ let render_home ?msg stocks players request =
   <li>Buy IPO</li>
   <li>Bid offer</li>
   <li>Ask offer</li>
-  <li>Get price</li>
+  <li>Get stock price</li>
   <li>Get player info</li>
 
   <br>
   <input name="action" autofocus>
+
+  <br>
   <p>Current number of stocks: <%s (string_of_int (Map.length stocks)) %></p>
   <br>
   <p>Current number of players: <%s (string_of_int (Map.length players)) %></p>
@@ -192,6 +241,8 @@ let () =
           | "buy ipo" -> Dream.html (render_buy_ipo request)
           | "bid offer" -> Dream.html (render_offer_bid request)
           | "ask offer" -> Dream.html (render_offer_ask request)
+          | "get stock price" -> Dream.html (render_get_price request)
+          | "get player info" -> Dream.html (render_get_player_info request)
           | _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
           end
         | `Ok ["stock_name", stock_name] -> 
@@ -261,6 +312,17 @@ let () =
             | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
             end
           | _ -> Dream.html (render_home ~msg:"Invalid ask order" !stocks !players request)
+          end
+        | `Ok ["stock_get_price", stock_get_price] ->
+          begin match get_price stock_get_price !stocks with
+          | Ok (Some p) -> Dream.html (render_home ~msg:(String.concat ~sep:"" ["Current price of "; stock_get_price; ": "; string_of_float p]) !stocks !players request)
+          | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
+          | _ -> Dream.html (render_home ~msg:"No price found" !stocks !players request)
+          end
+        | `Ok ["player_name_info", player_name_info] -> 
+          begin match get_player_info player_name_info !players with
+          | Ok res -> Dream.html (render_home ~msg:(String.concat ~sep:"" ["Info for "; player_name_info]) ~res !stocks !players request)
+          | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
           end
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request

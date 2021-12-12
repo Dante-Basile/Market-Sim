@@ -8,6 +8,7 @@ let players = ref (Map.empty (module String));;
 let opinions = ref (Map.empty (module String));;
 let cur_player = ref "";;
 
+(* Add new stocks *)
 let render_stock ?duplicate request =
   <html>
   <head>
@@ -30,6 +31,7 @@ let render_stock ?duplicate request =
   </body>
   </html> 
 
+(* Add new player with their allotted funds *)
 let render_player ?msg ~(duplicate: bool) ~(approved_player: string option) request =
   <html>
   <head>
@@ -66,6 +68,7 @@ let render_player ?msg ~(duplicate: bool) ~(approved_player: string option) requ
   </body>
   </html> 
 
+(* Adding IPO purchase request *)
 let render_buy_ipo request =
   <html>
   <head>
@@ -83,6 +86,7 @@ let render_buy_ipo request =
   </body>
   </html> 
 
+(* Process bid offer request *)
 let render_offer_bid request =
   <html>
   <head>
@@ -92,7 +96,6 @@ let render_offer_bid request =
   </head>
   <body>
     <h1>Bid Offer</h1>
-
     <p>Please enter bid offer request in form "STOCK|COUNT|PURCHASE_VALUE|PLAYER_NAME"</p>
     <%s! Dream.form_tag ~action:"/" request %>
       <input name="bid_offer" autofocus>
@@ -100,6 +103,7 @@ let render_offer_bid request =
   </body>
   </html> 
 
+(* Process ask offer request *)
 let render_offer_ask request =
   <html>
   <head>
@@ -109,7 +113,6 @@ let render_offer_ask request =
   </head>
   <body>
     <h1>Ask Offer</h1>
-
     <p>Please enter ask offer request in form "STOCK|COUNT|PURCHASE_VALUE|PLAYER_NAME"</p>
     <%s! Dream.form_tag ~action:"/" request %>
       <input name="ask_offer" autofocus>
@@ -117,6 +120,7 @@ let render_offer_ask request =
   </body>
   </html> 
 
+(* Request to retrieve price of stock*)
 let render_get_price request =
   <html>
   <head>
@@ -133,6 +137,7 @@ let render_get_price request =
   </body>
   </html> 
 
+(* Request to retrieve player's funds and owned stocks *)
 let render_get_player_info request =
   <html>
   <head>
@@ -149,6 +154,7 @@ let render_get_player_info request =
   </body>
   </html> 
 
+(* Retrieve highest bid and lowest ask for a stock*)
 let render_get_bid_ask request =
   <html>
   <head>
@@ -165,6 +171,7 @@ let render_get_bid_ask request =
   </body>
   </html> 
 
+(* Retrieve the difference between highest bid and lowest ask*)
 let render_bid_ask_spread request =
   <html>
   <head>
@@ -181,6 +188,7 @@ let render_bid_ask_spread request =
   </body>
   </html> 
 
+(* Get opinion of a stock*)
 let render_get_opinion request =
   <html>
   <head>
@@ -196,7 +204,8 @@ let render_get_opinion request =
     </form>
   </body>
   </html> 
-  
+
+(* Home page *)
 let render_home ?msg ?res stocks players request =
   <html>
   <head>
@@ -238,7 +247,6 @@ let render_home ?msg ?res stocks players request =
 
   <br>
   <input name="action" autofocus>
-
   <br>
   <p>Current number of stocks: <%s (string_of_int (Map.length stocks)) %></p>
   <br>
@@ -247,6 +255,7 @@ let render_home ?msg ?res stocks players request =
   </body>
   </html> 
 
+(* Convert string order into list with order type*)
 let format_order (order: string) : string list = 
   String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] order
   |> List.filter ~f:(fun x -> String.(<>) x "");;
@@ -298,24 +307,27 @@ let () =
           | None -> 
             cur_player := player_name; 
             Dream.html (render_player ~duplicate:false ~approved_player:(Some player_name) request)
-          | Some _ -> Dream.html (render_player ~duplicate:true ~approved_player:None request) (* player already exists *)
+          | Some _ -> (* player already exists *)
+            Dream.html (render_player ~duplicate:true ~approved_player:None request)
           end
         | `Ok ["player_funds", player_funds] ->
           let f = 
             try float_of_string player_funds
-            with Failure _ -> -1.
+            with Failure _ -> -1. (* funds provided not float type*)
           in
           begin match add_player !cur_player f !players with
           | Ok updated_players -> 
             players := updated_players;
             Dream.html (render_home !stocks !players request)
-          | Error _ -> failwith "duplicate player not caught in player_name match"
+          | Error _ -> Dream.html (render_player ~duplicate:true ~approved_player:None request)
           end
         | `Ok ["ipo_order", ipo_order] -> 
           let o = format_order ipo_order in
           begin match o with
           | [ticker; ct; value; p_id] -> 
-            let order = {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} in
+            let order = 
+              {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} 
+            in
             begin match buy_ipo order !stocks !players with 
             | Ok updated_players ->
               players := updated_players;
@@ -328,7 +340,9 @@ let () =
           let o = format_order bid_offer in
           begin match o with
           | [ticker; ct; value; p_id] -> 
-            let order = {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} in
+            let order = 
+              {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id}
+            in
             begin match offer_bid order !bids !asks !stocks !players with 
             | Ok (updated_bids, updated_asks, updated_stocks, updated_players) ->
               bids := updated_bids;
@@ -344,7 +358,9 @@ let () =
           let o = format_order ask_offer in
           begin match o with
           | [ticker; ct; value; p_id] -> 
-            let order = {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id} in
+            let order = 
+              {ticker = ticker; ct = int_of_string ct; value = float_of_string value; p_id = p_id}
+            in
             begin match offer_ask order !bids !asks !stocks !players with 
             | Ok (updated_bids, updated_asks, updated_stocks, updated_players) ->
               bids := updated_bids;
@@ -358,37 +374,51 @@ let () =
           end
         | `Ok ["stock_get_price", stock_get_price] ->
           begin match get_price stock_get_price !stocks with
-          | Ok (Some p) -> Dream.html (render_home ~msg:(String.concat ~sep:"" ["Current price of "; stock_get_price; ": "; string_of_float p]) !stocks !players request)
+          | Ok (Some p) -> Dream.html (render_home
+            ~msg: (String.concat ~sep:"" ["Current price of "; stock_get_price; ": "; string_of_float p])
+            !stocks !players request)
           | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
           | _ -> Dream.html (render_home ~msg:"No price found" !stocks !players request)
           end
         | `Ok ["player_name_info", player_name_info] -> 
           begin match get_player_info player_name_info !players with
           | Ok res -> 
-            Dream.html (render_home ~msg:(String.concat ~sep:"" ["Info for "; player_name_info]) ~res !stocks !players request)
+            Dream.html (render_home 
+            ~msg:(String.concat ~sep:"" ["Info for "; player_name_info]) 
+            ~res !stocks !players request)
           | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
           end
         | `Ok ["stock_get_bid_ask", stock_get_bid_ask] ->
           begin match get_bid_ask stock_get_bid_ask !bids !asks with
           | (Some max_bid, Some min_ask) -> 
-            Dream.html (render_home ~msg:(String.concat ~sep:"" [stock_get_bid_ask; ": \n"; "Highest bid: "; string_of_float max_bid; "\nLowest Ask: "; string_of_float min_ask]) !stocks !players request)
-          | _ -> Dream.html (render_home ~msg:(String.concat ~sep:"" [stock_get_bid_ask; " not found"]) !stocks !players request)
+            Dream.html (render_home 
+                ~msg:(String.concat ~sep:"" 
+                [stock_get_bid_ask; ": \n"; "Highest bid: "; string_of_float max_bid; "\nLowest Ask: "; string_of_float min_ask])
+              !stocks !players request)
+          | _ -> 
+            Dream.html (render_home 
+              ~msg:(String.concat ~sep:"" [stock_get_bid_ask; " not found"]) !stocks !players request)
           end
         | `Ok ["stock_bid_ask_spread", stock_bid_ask_spread] ->
           begin match get_bid_ask_spread stock_bid_ask_spread !bids !asks with
-          | Ok diff -> Dream.html (render_home ~msg:(String.concat ~sep:"" ["Bid ask spread of "; stock_bid_ask_spread; ": "; string_of_float diff]) !stocks !players request)
-          | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
+          | Ok diff -> 
+            Dream.html (render_home 
+              ~msg:(String.concat ~sep:"" ["Bid ask spread of "; stock_bid_ask_spread; ": "; string_of_float diff]) 
+              !stocks !players request)
+          | Error e -> 
+            Dream.html (render_home ~msg:e !stocks !players request)
           end
         | `Ok ["stock_get_opinion", stock_get_opinion] ->
           begin match get_opinion stock_get_opinion !opinions with
-          | Ok res -> Dream.html (render_home ~msg:(String.concat ~sep:"" ["Opinion rating for "; stock_get_opinion; ": "; string_of_int res]) !stocks !players request)
-          | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
+          | Ok res -> 
+            Dream.html (render_home 
+            ~msg:(String.concat ~sep:"" ["Opinion rating for "; stock_get_opinion; ": "; string_of_int res])
+            !stocks !players request)
+          | Error e -> 
+            Dream.html (render_home ~msg:e !stocks !players request)
           end
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request
       end;
   ]
   @@ Dream.not_found
-
-  (* to do:
-  - catch error where player fund is not float *)

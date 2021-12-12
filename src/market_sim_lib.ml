@@ -25,9 +25,12 @@ let add_stock (ticker: string) (stocks: stock_price_map): (stock_price_map, stri
   | `Duplicate -> Error "stock already exists"
 
 let add_player (id: string) (st_funds: float) (pm: player_map): (player_map, string) result =
-  match Map.add pm ~key:id ~data:{funds = [st_funds]; stocks = Map.empty (module String)} with
-  | `Ok pm_new -> Ok pm_new
-  | `Duplicate -> Error "player already exists"
+  if Float.(>=) st_funds 0. then
+    match Map.add pm ~key:id ~data:{funds = [st_funds]; stocks = Map.empty (module String)} with
+    | `Ok pm_new -> Ok pm_new
+    | `Duplicate -> Error "player already exists"
+  else
+    Error "starting funds must be greater than zero"
 
 (*
 *)

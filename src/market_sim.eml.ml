@@ -30,7 +30,7 @@ let render_stock ?duplicate request =
   </body>
   </html> 
 
-let render_player ~(duplicate: bool) ~(approved_player: string option) request =
+let render_player ?msg ~(duplicate: bool) ~(approved_player: string option) request =
   <html>
   <head>
     <meta charset="UTF-8">
@@ -43,6 +43,12 @@ let render_player ~(duplicate: bool) ~(approved_player: string option) request =
 %   | true ->
       <p>Player already exists</p>
 %   | false -> ()
+%   end;
+
+%   begin match msg with
+%   | Some m ->
+      <p><%s m %></p>
+%   | _ -> ()
 %   end;
 
 %   begin match approved_player with
@@ -295,7 +301,10 @@ let () =
           | Some _ -> Dream.html (render_player ~duplicate:true ~approved_player:None request) (* player already exists *)
           end
         | `Ok ["player_funds", player_funds] ->
-          let f = float_of_string player_funds in
+          let f = 
+            try float_of_string player_funds
+            with Failure _ -> -1.
+          in
           begin match add_player !cur_player f !players with
           | Ok updated_players -> 
             players := updated_players;

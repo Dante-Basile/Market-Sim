@@ -293,7 +293,7 @@ let get_bid_ask (ticker: string) (bids: order_map) (asks: order_map): float opti
 let get_bid_ask_spread (ticker: string) (bids: order_map) (asks: order_map): (float, string) result =
   match get_bid_ask ticker bids asks with
   | Some bid, Some ask -> Ok (ask -. bid)
-  | Some _, None -> Error "no acitve ask"
+  | Some _, None -> Error "no active ask"
   | None, Some _ -> Error "no active bid"
   | None, None -> Error "no active bid or ask"
 

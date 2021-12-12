@@ -375,7 +375,8 @@ let () =
         | `Ok ["stock_get_price", stock_get_price] ->
           begin match get_price stock_get_price !stocks with
           | Ok (Some p) -> Dream.html (render_home
-            ~msg: (String.concat ~sep:"" ["Current price of "; stock_get_price; ": "; string_of_float p])
+            ~msg: (String.concat ~sep:"" 
+              ["Current price of "; stock_get_price; ": "; string_of_float p])
             !stocks !players request)
           | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
           | _ -> Dream.html (render_home ~msg:"No price found" !stocks !players request)
@@ -392,18 +393,21 @@ let () =
           begin match get_bid_ask stock_get_bid_ask !bids !asks with
           | (Some max_bid, Some min_ask) -> 
             Dream.html (render_home 
-                ~msg:(String.concat ~sep:"" 
-                [stock_get_bid_ask; ": \n"; "Highest bid: "; string_of_float max_bid; "\nLowest Ask: "; string_of_float min_ask])
+              ~msg:(String.concat ~sep:"" 
+                [stock_get_bid_ask; ": \n"; "Highest bid: "; string_of_float max_bid; 
+                "\nLowest Ask: "; string_of_float min_ask])
               !stocks !players request)
           | _ -> 
             Dream.html (render_home 
-              ~msg:(String.concat ~sep:"" [stock_get_bid_ask; " not found"]) !stocks !players request)
+              ~msg:(String.concat ~sep:"" 
+                [stock_get_bid_ask; " not found"]) !stocks !players request)
           end
         | `Ok ["stock_bid_ask_spread", stock_bid_ask_spread] ->
           begin match get_bid_ask_spread stock_bid_ask_spread !bids !asks with
           | Ok diff -> 
             Dream.html (render_home 
-              ~msg:(String.concat ~sep:"" ["Bid ask spread of "; stock_bid_ask_spread; ": "; string_of_float diff]) 
+              ~msg:(String.concat ~sep:"" 
+                ["Bid ask spread of "; stock_bid_ask_spread; ": "; string_of_float diff]) 
               !stocks !players request)
           | Error e -> 
             Dream.html (render_home ~msg:e !stocks !players request)
@@ -412,7 +416,8 @@ let () =
           begin match get_opinion stock_get_opinion !opinions with
           | Ok res -> 
             Dream.html (render_home 
-            ~msg:(String.concat ~sep:"" ["Opinion rating for "; stock_get_opinion; ": "; string_of_int res])
+            ~msg:(String.concat ~sep:"" 
+              ["Opinion rating for "; stock_get_opinion; ": "; string_of_int res])
             !stocks !players request)
           | Error e -> 
             Dream.html (render_home ~msg:e !stocks !players request)

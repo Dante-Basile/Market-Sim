@@ -332,8 +332,10 @@ let test_offer_bid_ask_cov _ =
 ;;
 
 let test_get_line_plot _ =
-  let f_0 = get_line_plot [0.; 1.; 2.] [4.; 6.; 20.] in
+  let f_0 = get_line_plot [0.; 1.; 2.] [4.; 6.; 26.] in
   assert_equal (f_0 0.5) 5.;
+  assert_equal (f_0 1.25) 11.;
+  assert_equal (f_0 (-0.1)) 0.;
 ;;
 
 (*

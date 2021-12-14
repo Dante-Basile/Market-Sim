@@ -340,5 +340,5 @@ let get_line_plot (x: float list) (y: float list) (plt_in: float): float =
   else
     match find_range x y plt_in with
     | Some (x_l, x_h, y_l, y_h) ->
-      y_l +. ((y_h -. y_l) *. ((x_h -. x_l) /. (plt_in -. x_l)))
+      y_l +. ((y_h -. y_l) *. ((plt_in -. x_l) /. (x_h -. x_l)))
     | None -> 0.

@@ -1,9 +1,6 @@
 open Market_sim_lib;;
 open Core;;
-(* open Owl;; *)
 open Owl_plplot;;
-
-[@@@ocaml.warning "-8"] (* unused variable *)
 
 let stocks = ref (Map.empty (module String));;
 let bids = ref (Map.empty (module String));;

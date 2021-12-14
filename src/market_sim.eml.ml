@@ -377,11 +377,15 @@ let () =
             try float_of_string player_funds
             with Failure _ -> -1. (* funds provided not float type*)
           in
-          begin match add_player !cur_player f !players with
-          | Ok updated_players -> 
-            players := updated_players;
-            Dream.html (render_home !stocks !players request)
-          | Error _ -> Dream.html (render_player ~duplicate:true ~approved_player:None request)
+          begin match Float.(<) f 0. with
+          | true -> Dream.html (render_home ~msg:"Funds cannot be negative" !stocks !players request)
+          | false -> 
+            begin match add_player !cur_player f !players with
+            | Ok updated_players -> 
+              players := updated_players;
+              Dream.html (render_home !stocks !players request)
+            | Error _ -> Dream.html (render_player ~duplicate:true ~approved_player:None request)
+            end
           end
         | `Ok ["ipo_order", ipo_order] -> 
           let o = format_order ipo_order in

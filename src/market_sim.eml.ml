@@ -227,7 +227,7 @@ let render_stock_plot request =
   </html> 
 
 (* Home page *)
-let render_home ?msg ?res ?img stocks players request =
+let render_home ?msg ?res stocks players request =
   <html>
   <head>
     <meta charset="UTF-8">
@@ -249,12 +249,6 @@ let render_home ?msg ?res ?img stocks players request =
       <% List.iter p_stocks ~f:begin fun (s, n) -> %>
         <p>Stock: <%s s %>   Count: <%s string_of_int n %></p>
       <% end; %>
-%   | _ -> ()
-%   end;
-
-%   begin match img with
-%   | Some img_fp -> 
-      <img src=<%s img_fp %> alt=<%s Sys.getcwd () %> width=600 height=500></img>
 %   | _ -> ()
 %   end;
 
@@ -306,14 +300,14 @@ let stock_hist_plot (ticker: string): string =
       List.range ~stride:1 ~start:`inclusive ~stop:`exclusive 0 (List.length y)
       |> List.map ~f:float_of_int
     in
-    let f = get_line_plot (x) (List.rev y) in
+    let f = get_line_plot (x) (y) in
     let h = Plot.create "stock_hist.png" in
     let min = List.fold y ~init:Float.max_value ~f:(
       fun cur_min num -> 
         if Float.(<) num cur_min then num else cur_min) in
     let max = List.fold y ~init:0. ~f:(
-      fun cur_min num -> 
-        if Float.(>) num cur_min then num else cur_min) in
+      fun cur_max num -> 
+        if Float.(>) num cur_max then num else cur_max) in
     Plot.set_title h (String.concat ~sep:"" ["History of Stock Prices for "; ticker]);
     Plot.set_xlabel h "Time";
     Plot.set_ylabel h "Price";
@@ -321,9 +315,9 @@ let stock_hist_plot (ticker: string): string =
     Plot.set_pen_size h 3.;
     Plot.plot_fun ~h f (List.hd_exn x) ((float_of_int (List.length y)) -. 1.);
     Plot.set_xrange h (List.hd_exn x) ((float_of_int (List.length y)) -. 1.);
-    Plot.set_yrange h min max;
+    Plot.set_yrange h (min -. 100.) (max +. 100.);
     Plot.output h;
-    "stock_hist.png";;
+    "Plot saved as stock_hist.png"
 
 (*
   main:
@@ -337,7 +331,7 @@ let () =
 
     Dream.get  "/"
       (fun request ->
-        Dream.html (render_home ~img:"logo.png" !stocks !players request));
+        Dream.html (render_home !stocks !players request));
 
     Dream.post "/"
       begin
@@ -492,7 +486,7 @@ let () =
         | `Ok ["stock_plot", stock_plot] ->
           begin match stock_hist_plot stock_plot with
           | "stock doesn't exist" -> Dream.html (render_home ~msg:"stock doesn't exist" !stocks !players request)
-          | img -> Dream.html (render_home ~img !stocks !players request)
+          | msg -> Dream.html (render_home ~msg !stocks !players request)
           end
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request

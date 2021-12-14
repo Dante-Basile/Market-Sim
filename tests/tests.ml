@@ -336,6 +336,7 @@ let test_get_line_plot _ =
   assert_equal (f_0 0.5) 5.;
   assert_equal (f_0 1.25) 11.;
   assert_equal (f_0 (-0.1)) 0.;
+  assert_equal (f_0 2.1) 0.;
 ;;
 
 (*

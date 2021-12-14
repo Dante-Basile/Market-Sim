@@ -30,7 +30,7 @@ let add_player (id: string) (st_funds: float) (pm: player_map): (player_map, str
     | `Ok pm_new -> Ok pm_new
     | `Duplicate -> Error "player already exists"
   else
-    Error "starting funds must be greater than zero"
+    Error "starting funds cannot be negative"
 
 (*
   Add the supplied ct_add to the head of l_ct
@@ -322,7 +322,7 @@ let get_line_plot (x: float list) (y: float list) (plt_in: float): float =
   let in_range (l: float) (h: float) (v: float): bool = Float.(<=) l v && Float.(<=) v h in
   let rec find_range (x: float list) (y: float list) (plt_in: float): (float * float * float * float) option =
     match x, y with
-    | [], [] -> failwith "x and y are empty"
+    | [], [] -> failwith "x and y are empty" [@coverage off]
     | _ :: [], _ :: [] -> None
     | x_l :: x_h :: [], y_l :: y_h :: [] ->
       if in_range x_l x_h plt_in then
@@ -334,7 +334,7 @@ let get_line_plot (x: float list) (y: float list) (plt_in: float): float =
         Some (x_l, x_h, y_l, y_h)
       else
         find_range (x_h :: x_r) (y_h :: y_r) plt_in
-    | _, _ -> failwith "x and y are different lengths"
+    | _, _ -> failwith "x and y are different lengths" [@coverage off]
   in
   if Float.(<) plt_in (List.hd_exn x) then
     0.

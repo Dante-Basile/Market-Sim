@@ -1,5 +1,7 @@
 open Market_sim_lib;;
 open Core;;
+(* open Owl;;
+open Owl_plplot;; *)
 
 let stocks = ref (Map.empty (module String));;
 let bids = ref (Map.empty (module String));;
@@ -205,8 +207,25 @@ let render_get_opinion request =
   </body>
   </html> 
 
+(* Plot history of stock price *)
+let render_stock_plot request =
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock Market Simulator</title>
+  </head>
+  <body>
+    <h1>Plot Stock History</h1>
+    <p>Please enter stock</p>
+    <%s! Dream.form_tag ~action:"/" request %>
+      <input name="stock_plot" autofocus>
+    </form>
+  </body>
+  </html> 
+
 (* Home page *)
-let render_home ?msg ?res stocks players request =
+let render_home ?msg ?res ?img stocks players request =
   <html>
   <head>
     <meta charset="UTF-8">
@@ -226,8 +245,14 @@ let render_home ?msg ?res stocks players request =
 %   | Some (p_funds, p_stocks) -> 
       <p>Funds: <%s string_of_float p_funds%></p>
       <% List.iter p_stocks ~f:begin fun (s, n) -> %>
-        <p>Stock: <%s s %> Count: <%s string_of_int n %></p>
+        <p>Stock: <%s s %>   Count: <%s string_of_int n %></p>
       <% end; %>
+%   | _ -> ()
+%   end;
+
+%   begin match img with
+%   | Some img_fp -> 
+      <img src=<%s img_fp %> alt=<%s img_fp %> width=600 height=500></img>
 %   | _ -> ()
 %   end;
 
@@ -260,6 +285,33 @@ let format_order (order: string) : string list =
   String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] order
   |> List.filter ~f:(fun x -> String.(<>) x "");;
 
+(* let dante_func x y : string = "need to implement"
+
+let stock_hist_plot (ticker: string): string = 
+  let hist_orig = match Map.find !stocks ticker with
+  | Some l -> l
+  | None -> []
+  in
+  let y = List.fold_right hist_orig ~f:(
+    fun x accum -> match x with
+    | Some price -> price :: accum
+    | None -> accum) ~init:[]
+  in
+  match List.length y with
+  | 0 -> "stock doesn't exist"
+  | _ ->
+    let x = List.range ~stride:1 ~start:`inclusive ~stop:`exclusive 0 (List.length y) in
+    let f x = dante_func x y in
+    let h = Plot.create "stock_hist.png" in
+
+    Plot.set_title h (String.concat ~sep:"" ["History of Stock Prices for "; ticker]);
+    Plot.set_xlabel h "Time";
+    Plot.set_ylabel h "Price";
+    Plot.set_font_size h 8.;
+    Plot.set_pen_size h 3.;
+    Plot.plot_fun ~h f (float_of_int 0) (float_of_int List.length hist);
+    "stock_hist.png";; *)
+
 (*
   main:
 *)
@@ -271,7 +323,7 @@ let () =
 
     Dream.get  "/"
       (fun request ->
-        Dream.html (render_home !stocks !players request));
+        Dream.html (render_home ~img:"../../newlogo_transparent.png" !stocks !players request));
 
     Dream.post "/"
       begin
@@ -291,7 +343,8 @@ let () =
           | "shift opinion randomly" -> 
             opinions := random_shift_opinion !opinions !stocks;
             Dream.html (render_home ~msg:"Shifted opinion randomly" !stocks !players request)
-          | "get opinion" -> Dream.html (render_get_opinion request)
+          | "get stock opinion" -> Dream.html (render_get_opinion request)
+          (* | "plot stock history" -> Dream.html (render_stock_plot request) *)
           | _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
           end
         | `Ok ["stock_name", stock_name] -> 
@@ -422,6 +475,10 @@ let () =
           | Error e -> 
             Dream.html (render_home ~msg:e !stocks !players request)
           end
+        (* | `Ok ["stock_plot", stock_plot] ->
+          match stock_hist_plot stock_plot with
+          | "stock doesn't exist" -> Dream.html (render_home ~msg:"stock doesn't exist" !stocks !players request)
+          | img -> Dream.html (render_home ~img !stocks !players request) *)
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request
       end;

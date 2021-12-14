@@ -301,7 +301,7 @@ let stock_hist_plot (ticker: string): string =
       List.range ~stride:1 ~start:`inclusive ~stop:`exclusive 0 (List.length y)
       |> List.map ~f:float_of_int
     in
-    let f = get_line_plot (x) (y) in
+    let f = get_line_plot (x) (List.rev y) in
     let h = Plot.create "stock_hist.png" in
     let min = List.fold y ~init:Float.max_value ~f:(
       fun cur_min num -> 

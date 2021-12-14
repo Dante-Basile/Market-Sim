@@ -282,6 +282,7 @@ let format_order (order: string) : string list =
   String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] order
   |> List.filter ~f:(fun x -> String.(<>) x "");;
 
+(* Plot history of stock prices *)
 let stock_hist_plot (ticker: string): string = 
   let hist_orig = match Map.find !stocks ticker with
   | Some l -> l

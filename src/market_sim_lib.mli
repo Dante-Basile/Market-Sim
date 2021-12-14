@@ -102,7 +102,6 @@ val get_opinion : string -> opinion_map -> (int, string) result
 
 (*
   Get function to make line graph from scatter plot
-  This may still be inadequate for the owl plotting library, needs further investigation
   Supply x and y to curry function
   x and y must have at least 2 elements in order for a line to be drawable
 *)

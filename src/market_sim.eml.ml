@@ -1,7 +1,9 @@
 open Market_sim_lib;;
 open Core;;
-(* open Owl;;
-open Owl_plplot;; *)
+(* open Owl;; *)
+open Owl_plplot;;
+
+[@@@ocaml.warning "-8"] (* unused variable *)
 
 let stocks = ref (Map.empty (module String));;
 let bids = ref (Map.empty (module String));;
@@ -252,7 +254,7 @@ let render_home ?msg ?res ?img stocks players request =
 
 %   begin match img with
 %   | Some img_fp -> 
-      <img src=<%s img_fp %> alt=<%s img_fp %> width=600 height=500></img>
+      <img src=<%s img_fp %> alt=<%s Sys.getcwd () %> width=600 height=500></img>
 %   | _ -> ()
 %   end;
 
@@ -269,6 +271,7 @@ let render_home ?msg ?res ?img stocks players request =
   <li>Get bid ask spread</li>
   <li>Shift opinion randomly</li>
   <li>Get stock opinion</li>
+  <li>Plot stock history</li>
 
   <br>
   <input name="action" autofocus>
@@ -285,8 +288,6 @@ let format_order (order: string) : string list =
   String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] order
   |> List.filter ~f:(fun x -> String.(<>) x "");;
 
-(* let dante_func x y : string = "need to implement"
-
 let stock_hist_plot (ticker: string): string = 
   let hist_orig = match Map.find !stocks ticker with
   | Some l -> l
@@ -299,23 +300,36 @@ let stock_hist_plot (ticker: string): string =
   in
   match List.length y with
   | 0 -> "stock doesn't exist"
+  | 1 -> "more data points needed"
   | _ ->
-    let x = List.range ~stride:1 ~start:`inclusive ~stop:`exclusive 0 (List.length y) in
-    let f x = dante_func x y in
+    let x = 
+      List.range ~stride:1 ~start:`inclusive ~stop:`exclusive 0 (List.length y)
+      |> List.map ~f:float_of_int
+    in
+    let f = get_line_plot (x) (List.rev y) in
     let h = Plot.create "stock_hist.png" in
-
+    let min = List.fold y ~init:Float.max_value ~f:(
+      fun cur_min num -> 
+        if Float.(<) num cur_min then num else cur_min) in
+    let max = List.fold y ~init:0. ~f:(
+      fun cur_min num -> 
+        if Float.(>) num cur_min then num else cur_min) in
     Plot.set_title h (String.concat ~sep:"" ["History of Stock Prices for "; ticker]);
     Plot.set_xlabel h "Time";
     Plot.set_ylabel h "Price";
     Plot.set_font_size h 8.;
     Plot.set_pen_size h 3.;
-    Plot.plot_fun ~h f (float_of_int 0) (float_of_int List.length hist);
-    "stock_hist.png";; *)
+    Plot.plot_fun ~h f (List.hd_exn x) ((float_of_int (List.length y)) -. 1.);
+    Plot.set_xrange h (List.hd_exn x) ((float_of_int (List.length y)) -. 1.);
+    Plot.set_yrange h min max;
+    Plot.output h;
+    "stock_hist.png";;
 
 (*
   main:
 *)
 let () =
+  if (Sys.file_exists_exn "logo.png") then
   Dream.run
   @@ Dream.logger
   @@ Dream.memory_sessions
@@ -323,7 +337,7 @@ let () =
 
     Dream.get  "/"
       (fun request ->
-        Dream.html (render_home ~img:"../../newlogo_transparent.png" !stocks !players request));
+        Dream.html (render_home ~img:"logo.png" !stocks !players request));
 
     Dream.post "/"
       begin
@@ -344,7 +358,7 @@ let () =
             opinions := random_shift_opinion !opinions !stocks;
             Dream.html (render_home ~msg:"Shifted opinion randomly" !stocks !players request)
           | "get stock opinion" -> Dream.html (render_get_opinion request)
-          (* | "plot stock history" -> Dream.html (render_stock_plot request) *)
+          | "plot stock history" -> Dream.html (render_stock_plot request)
           | _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
           end
         | `Ok ["stock_name", stock_name] -> 
@@ -475,12 +489,14 @@ let () =
           | Error e -> 
             Dream.html (render_home ~msg:e !stocks !players request)
           end
-        (* | `Ok ["stock_plot", stock_plot] ->
-          match stock_hist_plot stock_plot with
+        | `Ok ["stock_plot", stock_plot] ->
+          begin match stock_hist_plot stock_plot with
           | "stock doesn't exist" -> Dream.html (render_home ~msg:"stock doesn't exist" !stocks !players request)
-          | img -> Dream.html (render_home ~img !stocks !players request) *)
+          | img -> Dream.html (render_home ~img !stocks !players request)
+          end
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request
       end;
   ]
   @@ Dream.not_found
+    else ();;

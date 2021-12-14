@@ -6,7 +6,13 @@ OCaml-based stock market simulator
 
 Project for EN.601.429/629 Functional Programming in Software Engineering
 
-## Run instructions
+## Build Instructions
+
+dune is required to build and run this library
+
+In main directory, run `dune build`
+
+## Run Instructions
 
 Run webserver-based GUI:
 

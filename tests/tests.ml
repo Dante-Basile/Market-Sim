@@ -337,6 +337,12 @@ let test_get_line_plot _ =
   assert_equal (f_0 1.25) 11.;
   assert_equal (f_0 (-0.1)) 0.;
   assert_equal (f_0 2.1) 0.;
+  let f_1 = get_line_plot [0.; 1.; 2.; 3.] [4.; 6.; 26.; 18.] in
+  assert_equal (f_1 0.5) 5.;
+  assert_equal (f_1 1.25) 11.;
+  assert_equal (f_1 2.25) 24.;
+  assert_equal (f_1 (-0.1)) 0.;
+  assert_equal (f_1 3.1) 0.;
 ;;
 
 (*

@@ -1,6 +1,8 @@
 (rule
   (target project.zip)
   (deps
+    Readme.md
+    dune-project
     src/market_sim_lib.ml
     src/market_sim_lib.mli
     src/market_sim.eml.ml

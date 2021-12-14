@@ -3,7 +3,7 @@
   (deps
     src/market_sim_lib.ml
     src/market_sim_lib.mli
-    src/market_sim.ml
+    src/market_sim.eml.ml
     src/dune
     tests/tests.ml
     tests/dune

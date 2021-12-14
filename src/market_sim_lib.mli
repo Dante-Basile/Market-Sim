@@ -99,3 +99,9 @@ val random_shift_opinion : opinion_map -> stock_price_map -> opinion_map
   Get current public opinion of stock
 *)
 val get_opinion : string -> opinion_map -> (int, string) result
+
+(*
+  Get function to make line scatter plot
+  Supply x and y to curry function
+*)
+val get_line_plot : float list -> float list -> float -> float

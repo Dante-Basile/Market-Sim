@@ -331,6 +331,11 @@ let test_offer_bid_ask_cov _ =
   (* bid and ask errors *)
 ;;
 
+let test_get_line_plot _ =
+  let f_0 = get_line_plot [0.; 1.; 2.] [4.; 6.; 20.] in
+  assert_equal (f_0 0.5) 5.;
+;;
+
 (*
 TODO: add advanced test: over cost, over ct
 *)
@@ -340,6 +345,7 @@ let market_sim_tests =
     "add player"                        >:: test_add_player;
     "buy ipo"                           >:: test_buy_ipo;
     "offer bid and offer ask coverage"  >:: test_offer_bid_ask_cov;
+    "get line plot"                     >:: test_get_line_plot;
   ]
 
 let test_series =

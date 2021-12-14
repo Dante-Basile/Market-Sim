@@ -316,3 +316,29 @@ let get_opinion (ticker: string) (opinions: opinion_map): (int, string) result =
   match Map.find opinions ticker with
   | Some o -> Ok (List.hd_exn o)
   | None -> Error "public opinion of this stock is unknown"
+
+let get_line_plot (x: float list) (y: float list) (plt_in: float): float =
+  let in_range (l: float) (h: float) (v: float): bool = Float.(<=) l v && Float.(<=) v h in
+  let rec find_range (x: float list) (y: float list) (plt_in: float): (float * float * float * float) option =
+    match x, y with
+    | [], [] -> failwith "x and y are empty"
+    | _ :: [], _ :: [] -> None
+    | x_l :: x_h :: [], y_l :: y_h :: [] ->
+      if in_range x_l x_h plt_in then
+        Some (x_l, x_h, y_l, y_h)
+      else
+        None
+    | x_l :: x_h :: x_r, y_l :: y_h :: y_r ->
+      if in_range x_l x_h plt_in then
+        Some (x_l, x_h, y_l, y_h)
+      else
+        find_range (x_h :: x_r) (y_h :: y_r) plt_in
+    | _, _ -> failwith "x and y are different lengths"
+  in
+  if Float.(<) plt_in (List.hd_exn x) then
+    0.
+  else
+    match find_range x y plt_in with
+    | Some (x_l, x_h, y_l, y_h) ->
+      y_l +. ((y_h -. y_l) *. ((x_h -. x_l) /. (plt_in -. x_l)))
+    | None -> 0.

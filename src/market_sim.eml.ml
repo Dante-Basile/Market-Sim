@@ -1,5 +1,9 @@
 open Market_sim_lib;;
 open Core;;
+(* open Owl;; *)
+open Owl_plplot;;
+
+[@@@ocaml.warning "-8"] (* unused variable *)
 
 let stocks = ref (Map.empty (module String));;
 let bids = ref (Map.empty (module String));;
@@ -205,6 +209,23 @@ let render_get_opinion request =
   </body>
   </html> 
 
+(* Plot history of stock price *)
+let render_stock_plot request =
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock Market Simulator</title>
+  </head>
+  <body>
+    <h1>Plot Stock History</h1>
+    <p>Please enter stock</p>
+    <%s! Dream.form_tag ~action:"/" request %>
+      <input name="stock_plot" autofocus>
+    </form>
+  </body>
+  </html> 
+
 (* Home page *)
 let render_home ?msg ?res stocks players request =
   <html>
@@ -226,7 +247,7 @@ let render_home ?msg ?res stocks players request =
 %   | Some (p_funds, p_stocks) -> 
       <p>Funds: <%s string_of_float p_funds%></p>
       <% List.iter p_stocks ~f:begin fun (s, n) -> %>
-        <p>Stock: <%s s %> Count: <%s string_of_int n %></p>
+        <p>Stock: <%s s %>   Count: <%s string_of_int n %></p>
       <% end; %>
 %   | _ -> ()
 %   end;
@@ -244,6 +265,7 @@ let render_home ?msg ?res stocks players request =
   <li>Get bid ask spread</li>
   <li>Shift opinion randomly</li>
   <li>Get stock opinion</li>
+  <li>Plot stock history</li>
 
   <br>
   <input name="action" autofocus>
@@ -260,10 +282,49 @@ let format_order (order: string) : string list =
   String.split_on_chars ~on:['|'; ' '; '\t'; '\n'] order
   |> List.filter ~f:(fun x -> String.(<>) x "");;
 
+(* Plot history of stock prices *)
+let stock_hist_plot (ticker: string): string = 
+  let hist_orig = match Map.find !stocks ticker with
+  | Some l -> l
+  | None -> []
+  in
+  let y = List.fold_right hist_orig ~f:(
+    fun x accum -> match x with
+    | Some price -> price :: accum
+    | None -> accum) ~init:[]
+  in
+  match List.length y with
+  | 0 -> "stock doesn't exist"
+  | 1 -> "more data points needed"
+  | _ ->
+    let x = 
+      List.range ~stride:1 ~start:`inclusive ~stop:`exclusive 0 (List.length y)
+      |> List.map ~f:float_of_int
+    in
+    let f = get_line_plot (x) (y) in
+    let h = Plot.create "stock_hist.png" in
+    let min = List.fold y ~init:Float.max_value ~f:(
+      fun cur_min num -> 
+        if Float.(<) num cur_min then num else cur_min) in
+    let max = List.fold y ~init:0. ~f:(
+      fun cur_max num -> 
+        if Float.(>) num cur_max then num else cur_max) in
+    Plot.set_title h (String.concat ~sep:"" ["History of Stock Prices for "; ticker]);
+    Plot.set_xlabel h "Time";
+    Plot.set_ylabel h "Price";
+    Plot.set_font_size h 8.;
+    Plot.set_pen_size h 3.;
+    Plot.plot_fun ~h f (List.hd_exn x) ((float_of_int (List.length y)) -. 1.);
+    Plot.set_xrange h (List.hd_exn x) ((float_of_int (List.length y)) -. 1.);
+    Plot.set_yrange h (min -. 100.) (max +. 100.);
+    Plot.output h;
+    "Plot saved as stock_hist.png"
+
 (*
   main:
 *)
 let () =
+  if (Sys.file_exists_exn "logo.png") then
   Dream.run
   @@ Dream.logger
   @@ Dream.memory_sessions
@@ -291,7 +352,8 @@ let () =
           | "shift opinion randomly" -> 
             opinions := random_shift_opinion !opinions !stocks;
             Dream.html (render_home ~msg:"Shifted opinion randomly" !stocks !players request)
-          | "get opinion" -> Dream.html (render_get_opinion request)
+          | "get stock opinion" -> Dream.html (render_get_opinion request)
+          | "plot stock history" -> Dream.html (render_stock_plot request)
           | _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
           end
         | `Ok ["stock_name", stock_name] -> 
@@ -375,7 +437,8 @@ let () =
         | `Ok ["stock_get_price", stock_get_price] ->
           begin match get_price stock_get_price !stocks with
           | Ok (Some p) -> Dream.html (render_home
-            ~msg: (String.concat ~sep:"" ["Current price of "; stock_get_price; ": "; string_of_float p])
+            ~msg: (String.concat ~sep:"" 
+              ["Current price of "; stock_get_price; ": "; string_of_float p])
             !stocks !players request)
           | Error e -> Dream.html (render_home ~msg:e !stocks !players request)
           | _ -> Dream.html (render_home ~msg:"No price found" !stocks !players request)
@@ -392,18 +455,21 @@ let () =
           begin match get_bid_ask stock_get_bid_ask !bids !asks with
           | (Some max_bid, Some min_ask) -> 
             Dream.html (render_home 
-                ~msg:(String.concat ~sep:"" 
-                [stock_get_bid_ask; ": \n"; "Highest bid: "; string_of_float max_bid; "\nLowest Ask: "; string_of_float min_ask])
+              ~msg:(String.concat ~sep:"" 
+                [stock_get_bid_ask; ": \n"; "Highest bid: "; string_of_float max_bid; 
+                "\nLowest Ask: "; string_of_float min_ask])
               !stocks !players request)
           | _ -> 
             Dream.html (render_home 
-              ~msg:(String.concat ~sep:"" [stock_get_bid_ask; " not found"]) !stocks !players request)
+              ~msg:(String.concat ~sep:"" 
+                [stock_get_bid_ask; " not found"]) !stocks !players request)
           end
         | `Ok ["stock_bid_ask_spread", stock_bid_ask_spread] ->
           begin match get_bid_ask_spread stock_bid_ask_spread !bids !asks with
           | Ok diff -> 
             Dream.html (render_home 
-              ~msg:(String.concat ~sep:"" ["Bid ask spread of "; stock_bid_ask_spread; ": "; string_of_float diff]) 
+              ~msg:(String.concat ~sep:"" 
+                ["Bid ask spread of "; stock_bid_ask_spread; ": "; string_of_float diff]) 
               !stocks !players request)
           | Error e -> 
             Dream.html (render_home ~msg:e !stocks !players request)
@@ -412,13 +478,20 @@ let () =
           begin match get_opinion stock_get_opinion !opinions with
           | Ok res -> 
             Dream.html (render_home 
-            ~msg:(String.concat ~sep:"" ["Opinion rating for "; stock_get_opinion; ": "; string_of_int res])
+            ~msg:(String.concat ~sep:"" 
+              ["Opinion rating for "; stock_get_opinion; ": "; string_of_int res])
             !stocks !players request)
           | Error e -> 
             Dream.html (render_home ~msg:e !stocks !players request)
+          end
+        | `Ok ["stock_plot", stock_plot] ->
+          begin match stock_hist_plot stock_plot with
+          | "stock doesn't exist" -> Dream.html (render_home ~msg:"stock doesn't exist" !stocks !players request)
+          | msg -> Dream.html (render_home ~msg !stocks !players request)
           end
         | `Ok _ -> Dream.html (render_home ~msg:"Invalid choice" !stocks !players request)
         | _ -> Dream.empty `Bad_Request
       end;
   ]
   @@ Dream.not_found
+    else ();;

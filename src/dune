@@ -15,7 +15,9 @@
     core
     stdio
     yojson
-    ppx_deriving_yojson.runtime)
+    ppx_deriving_yojson.runtime
+    owl
+    owl-plplot)
   (preprocess (pps ppx_deriving_yojson lwt_ppx)))
 
 (rule

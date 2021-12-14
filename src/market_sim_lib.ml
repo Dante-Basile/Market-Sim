@@ -33,6 +33,7 @@ let add_player (id: string) (st_funds: float) (pm: player_map): (player_map, str
     Error "starting funds must be greater than zero"
 
 (*
+  Add the supplied ct_add to the head of l_ct
 *)
 let inc_stock_ct (ct_add: int) (l_ct: int list option): int list =
   match l_ct with
@@ -59,16 +60,19 @@ let buy_ipo (o: order) (stocks: stock_price_map) (players: player_map): (player_
   | None, None -> Error "stock not listed on market and player does not exist"
 
 (*
+  Comparison function used to sort bid orders in order of descending share price
 *)
 let compare_bid (o_l: order) (o_r: order): int =
     -1 * Float.compare o_l.value o_r.value
 
 (*
+  Comparison function used to sort bid orders in order of descending share price
 *)
 let compare_ask (o_l: order) (o_r: order): int =
     Float.compare o_l.value o_r.value
 
 (*
+  Comparison function used to sort ask orders in order of ascending share price
 *)
 let add_order (comp: order -> order -> int) (orders: order_map) (o: order): order_map =
   let update_order (comp: order -> order -> int) (o: order) (l_o: order list option): order list =
@@ -82,14 +86,17 @@ let add_order (comp: order -> order -> int) (orders: order_map) (o: order): orde
     orders
 
 (*
+  Use add_order to add a bid to the bid list and sort the result accordingly
 *)
 let add_bid = add_order compare_bid
 
 (*
+  Use add_order to add an ask to the ask list and sort the result accordingly
 *)
 let add_ask = add_order compare_ask
 
 (*
+  Compute and update the result of matched bid and ask orders
 *)
 let trade (ticker: string) (bidder: player) (asker: player) (ct: int) (value: float): player * player =
   let new_bidder_funds =
@@ -104,14 +111,11 @@ let trade (ticker: string) (bidder: player) (asker: player) (ct: int) (value: fl
   let new_asker = {funds = new_asker_funds; stocks = new_asker_stocks} in
   new_bidder, new_asker
 
-(*
-  TODO: remove use of update for efficiency in offer_bid and offer_ask?
-*)
 let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_price_map) (players: player_map):
     (order_map * order_map * stock_price_map * player_map, string) result =
   let rec process_asks (players: player_map) (o_opt: order option) (bidder: player) (l_asks: order list):
       order option * order list * player_map =
-    match o_opt, l_asks with (* l_asks is sorted by increasing value, check still true in new *)
+    match o_opt, l_asks with (* l_asks is sorted by increasing value *)
     | Some o, o_ask :: l_r ->
       if Float.(>=) o.value o_ask.value then
         let o_new_opt, l_asks_new, new_players, new_bidder =
@@ -177,14 +181,11 @@ let offer_bid (o: order) (bids: order_map) (asks: order_map) (stocks: stock_pric
   | None, Some _ -> Error "stock not listed on market"
   | None, None -> Error "stock not listed on market and player does not exist"
 
-(*
-TODO: only update price if new_asks is different from asks
-*)
 let offer_ask (o: order) (bids: order_map) (asks: order_map) (stocks: stock_price_map) (players: player_map):
     (order_map * order_map * stock_price_map * player_map, string) result =
   let rec process_bids (players: player_map) (o_opt: order option) (asker: player) (l_bids: order list):
       order option * order list * player_map =
-    match o_opt, l_bids with (* l_bids is sorted by decreasing value, check still true in new *)
+    match o_opt, l_bids with (* l_bids is sorted by decreasing value *)
     | Some o, o_bid :: l_r ->
       if Float.(<=) o.value o_bid.value then
         let o_new_opt, l_bids_new, new_players, new_asker =

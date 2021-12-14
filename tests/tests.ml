@@ -328,7 +328,6 @@ let test_offer_bid_ask_cov _ =
   in
   assert_equal (Map.find_exn bids_3 "AMD") bids_exp;
   assert_equal (Map.find_exn asks_3 "AMD") asks_exp;
-  (* bid and ask errors *)
 ;;
 
 let test_get_line_plot _ =
@@ -345,9 +344,6 @@ let test_get_line_plot _ =
   assert_equal (f_1 3.1) 0.;
 ;;
 
-(*
-TODO: add advanced test: over cost, over ct
-*)
 let market_sim_tests =
   "market sim" >: test_list [
     "add stock"                         >:: test_add_stock;

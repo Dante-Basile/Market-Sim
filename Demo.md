@@ -1,0 +1,25 @@
+- Run `dune exe --root . ./market_sim.exe`
+- Add stock --> GOOG
+- Add player --> Scott w/ funds: 10000 (seller)
+- Add player --> Zach w/ funds: 10000 (seller)
+- Add player --> Alison w/ funds: 10000 (buyer)
+- Err: Add player --> Scott w/ funds --> duplicate player
+- Err: Add player --> Bob w/ funds: -10000 --> negative fund
+- Buy IPO --> GOOG|10|800|Zach (seller) --> Zach has $2000
+- Buy IPO --> GOOG|10|500|Scott (seller) --> Scott has $5000
+- Err: Buy IPO --> GOOG|1000|100|Alison --> insufficient funds
+- Get player info --> Zach --> $2000 left, 10 GOOG
+- Ask offer --> GOOG|10|1000|Zach --> GOOG price at 1000
+- Ask offer --> GOOG|5|950|Scott --> GOOG price at 950
+- Ask offer --> GOOG|5|800|Scott --> GOOG price at 800
+- Plot stock history (GOOG 1000 --> 950 --> 800)
+- Get player info --> Alison
+- Bid offer --> GOOG|5|700|Alison --> not matched; goes to queue
+- Get player info --> Alison (doesn't change)
+- Bid offer --> GOOG|5|850|Alison --> GOOG price at 950; Alison only pays at 800 per stock --> Alison has $6000
+- Plot stock history (GOOG goes up to 950)
+- Get highest big lowest ask --> GOOG
+- Get bid ask spread --> GOOG
+- Get player info --> Scott --> has 5 GOOG left, has $9000
+- Get player info --> Alison --> has 5 GOOG, has $6000
+
